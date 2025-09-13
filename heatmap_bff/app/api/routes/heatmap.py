@@ -90,7 +90,9 @@ async def cells(
     res: int = Depends(validate_resolution),
     metric: str = Query("points", pattern="^(points|trips)$"),
     include_suppressed: bool = Query(False),
-    include_score: bool = Query(False, description="Include score and score_quantile if available"),
+    include_score: bool = Query(
+        False, description="Include score and score_quantile if available"
+    ),
     k: int | None = Query(None, ge=1),
     bbox: str | None = Query(None, description="minLat,minLng,maxLat,maxLng"),
     format: str = Query("json", pattern="^(json|geojson)$"),
@@ -145,9 +147,17 @@ async def cells(
                     (r["point_count"] < k_val) or (r["unique_trips"] < k_val)
                 ),
                 schema_version="1.0.0",
-                score=(float(r["score"]) if include_score and "score" in r and not pd.isna(r["score"]) else None),
+                score=(
+                    float(r["score"])
+                    if include_score and "score" in r and not pd.isna(r["score"])
+                    else None
+                ),
                 score_quantile=(
-                    float(r["score_quantile"]) if include_score and "score_quantile" in r and not pd.isna(r["score_quantile"]) else None
+                    float(r["score_quantile"])
+                    if include_score
+                    and "score_quantile" in r
+                    and not pd.isna(r["score_quantile"])
+                    else None
                 ),
             )
         )
