@@ -20,10 +20,10 @@ venv/
 .idea/
 .vscode/
 
-# Data / Outputs
-/data/
+# Data / Outputs  
 /outputs/
 *.log
+# Note: /data/ is copied during deployment, not committed to git
 
 # Docker
 *.pid
