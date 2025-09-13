@@ -59,19 +59,17 @@ class AIService:
 
     def _load_hubs(self) -> None:
         """Load transport hubs from stop_clusters.csv."""
-        settings = get_settings()
         try:
-            df = pd.read_csv(f"{settings.artifacts_dir}/stop_clusters.csv")
-            # Take top hubs by count
-            df = df.sort_values("count", ascending=False).head(20)
+            df = pd.read_csv("outputs/stop_clusters.csv")
+            # Take top hubs by importance
+            df = df.sort_values("importance", ascending=False).head(20)
             self._hubs = {
-                (row["lat_mean"], row["lng_mean"]) for _, row in df.iterrows()
+                (row["lat"], row["lng"]) for _, row in df.iterrows()
             }
             logger.info(f"Loaded {len(self._hubs)} transport hubs")
         except Exception as e:
             logger.warning(f"Could not load hubs: {e}")
             self._hubs = set()
-
     def _calculate_hub_proximity(self, lat: float, lng: float) -> float:
         """Calculate proximity bonus based on distance to nearest hub."""
         if not self._hubs:
@@ -89,12 +87,13 @@ class AIService:
         return proximity_bonus
 
     def _prepare_training_data(self, res: int = 8) -> pd.DataFrame:
-        """Prepare training data from existing H3 aggregates."""
-        if res not in aggregates_repo.aggregates:
+        try:
+            resolution_data = aggregates_repo.get_resolution(res)
+        except KeyError:
             logger.error(f"No aggregates for resolution {res}")
             return pd.DataFrame()
 
-        df = aggregates_repo.aggregates[res].copy()
+        df = resolution_data.data.copy()
 
         # Calculate activity level (normalized)
         max_points = df["point_count"].max() if len(df) > 0 else 1
