@@ -12,7 +12,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 # Precomputed aggregates expected at this path (mount or bake beforehand)
-ENV PRECOMPUTED_AGG=./heatmap_bff/outputs/h3_aggregates.csv
+ENV PRECOMPUTED_AGG=./outputs/h3_aggregates.csv
 
 EXPOSE 8000
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

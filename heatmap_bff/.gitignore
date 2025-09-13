@@ -21,8 +21,8 @@ venv/
 .vscode/
 
 # Data / Outputs
-/data/*.parquet
-/data/*.feather
+/data/
+/outputs/
 *.log
 
 # Docker

@@ -18,8 +18,11 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_KEY }}
 
-      - name: Deploy (docker compose)
+      - name: Upload dataset and deploy
         run: |
+          # Upload the dataset file
+          scp -o StrictHostKeyChecking=no -i id_rsa geo_locations_astana_hackathon.csv ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}:~/tracks.csv
+          
           ssh -o StrictHostKeyChecking=no -i id_rsa ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} <<'EOF'
           set -e
           REPO=heatmap-bff
@@ -30,6 +33,11 @@ jobs:
           git fetch --all
           git reset --hard origin/main
           cd heatmap_bff
+          
+          # Ensure data directory exists and copy dataset
+          mkdir -p data
+          cp ~/tracks.csv data/tracks.csv
+          
           # Install Docker if missing (hackathon quick path)
           if ! command -v docker >/dev/null 2>&1; then
             echo "Docker not found: installing via get.docker.com script"
@@ -47,6 +55,13 @@ jobs:
             ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose || true;
           fi
           echo "Docker Compose version:"; (docker compose version || docker-compose version || true)
+          
+          # Build aggregates before starting container
+          docker run --rm -v $(pwd):/app -w /app python:3.11-slim bash -c "
+            pip install pandas h3 && 
+            python -m heatmap_bff.scripts.build_precomputed --input ./data/tracks.csv --out ./outputs/h3_aggregates.csv --res 6 7 8 --k 20
+          "
+          
           docker compose down || true
           docker compose up -d --build
           echo "Containers:"; docker ps --format 'table {{.Names}}\t{{.Status}}'
