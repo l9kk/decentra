@@ -10,6 +10,7 @@ from ...utils.geo import parse_bbox_query, point_in_bbox
 from ..deps import validate_resolution
 from hashlib import sha1
 from datetime import datetime
+import h3
 
 router = APIRouter(prefix="/heatmap", tags=["heatmap"])
 
@@ -96,6 +97,7 @@ async def cells(
     k: int | None = Query(None, ge=1),
     bbox: str | None = Query(None, description="minLat,minLng,maxLat,maxLng"),
     format: str = Query("json", pattern="^(json|geojson)$"),
+    polygon: bool = Query(True, description="When geojson, if true return Polygon cells else Point centers"),
     limit: int | None = Query(None, ge=1, le=50000),
 ):
     settings = get_settings()
@@ -132,6 +134,7 @@ async def cells(
     if limit:
         df = df.head(limit)
     cells_out: list[CellOut] = []
+    max_val = df[value_col].max() or 1
     for _, r in df.iterrows():
         cells_out.append(
             CellOut(
@@ -166,16 +169,20 @@ async def cells(
     response.headers["ETag"] = etag
     response.headers["Cache-Control"] = "public, max-age=60"
     if format == "geojson":
-        features = [
-            {
-                "type": "Feature",
-                "geometry": {
+        features = []
+        for c in cells_out:
+            props = c.model_dump(exclude={"center"})
+            # demand_index for live layer
+            if c.value is not None:
+                props["demand_index"] = round((c.value / max_val) if max_val else 0.0, 4)
+            if polygon:
+                boundary = h3.cell_to_boundary(c.h3, geo_json=True)
+                geometry = {"type": "Polygon", "coordinates": [boundary]}
+            else:
+                geometry = {
                     "type": "Point",
                     "coordinates": [c.center.lng, c.center.lat],
-                },
-                "properties": c.model_dump(exclude={"center"}),
-            }
-            for c in cells_out
-        ]
+                }
+            features.append({"type": "Feature", "geometry": geometry, "properties": props})
         return {"type": "FeatureCollection", "features": features}
     return [c.model_dump() for c in cells_out]

@@ -11,6 +11,7 @@ from .core.logging import configure_logging
 from .repositories.loader import load_or_precomputed
 from .repositories import optional_artifacts
 from .api.routes.heatmap import router as heatmap_router
+from .api.routes.forecast import router as forecast_router
 from .api.routes.future_stubs import router as future_router
 from .api.routes.system import router as system_router
 from .api.routes.intelligence import router as intel_router
@@ -37,6 +38,7 @@ def create_app() -> FastAPI:
     app.include_router(heatmap_router)
     app.include_router(intel_router)
     app.include_router(future_router)
+    app.include_router(forecast_router)
 
     @app.on_event("startup")
     def _startup() -> None:  # pragma: no cover - startup side effect
