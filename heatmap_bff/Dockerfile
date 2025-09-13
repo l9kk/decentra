@@ -14,7 +14,7 @@ COPY . .
 # Build aggregates if data exists during build
 RUN if [ -f "./data/tracks.csv" ]; then \
         echo "Building H3 aggregates during Docker build..."; \
-        PYTHONPATH=/app python -m heatmap_bff.scripts.build_precomputed \
+        python scripts/build_precomputed.py \
             --input ./data/tracks.csv \
             --out ./outputs/h3_aggregates.csv \
             --res 6 7 8 \
