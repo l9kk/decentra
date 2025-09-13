@@ -1,0 +1,13 @@
+version: '3.9'
+services:
+  heatmap-bff:
+    build: .
+    container_name: heatmap-bff
+    env_file: .env
+    environment:
+      PRECOMPUTED_AGG: ${PRECOMPUTED_AGG:-./heatmap_bff/outputs/h3_aggregates.csv}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./outputs:/app/heatmap_bff/outputs
+    restart: unless-stopped

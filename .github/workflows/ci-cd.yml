@@ -1,0 +1,37 @@
+name: simple-ci-cd
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prep SSH key
+        run: |
+          echo "$SSH_PRIVATE_KEY" > id_rsa
+          chmod 600 id_rsa
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.PROD_SSH_KEY }}
+
+      - name: Deploy (docker compose)
+        run: |
+          ssh -o StrictHostKeyChecking=no -i id_rsa ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} 'bash -lc '\''
+            set -e
+            REPO=heatmap-bff
+            if [ ! -d "$REPO" ]; then git clone ${{ github.server_url }}/${{ github.repository }} "$REPO"; fi
+            cd "$REPO"
+            git fetch --all
+            git reset --hard origin/main
+            cd heatmap_bff
+            docker compose down || true
+            docker compose up -d --build
+          '\''
+
+      - name: Health check
+        run: |
+          curl -fsS http://${{ secrets.PROD_HOST }}:8000/heatmap/meta | head -c 300 || (echo 'Health check failed' && exit 1)

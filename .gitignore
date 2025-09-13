@@ -1,0 +1,82 @@
+# Python cache / bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+.envrc
+
+# Environment / secrets
+.env
+*.env.local
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+*.ipynb_meta
+
+# VSCode / Editors
+.vscode/
+.idea/
+*.swp
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+.Python
+pip-wheel-metadata/
+
+# Logs / runtime
+*.log
+*.pid
+
+# Coverage / testing
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.tox/
+
+# Data & outputs (keep schema docs, ignore large generated files)
+outputs/
+!heatmap_bff/outputs/.gitkeep
+/data/
+!data/README.md
+*.parquet
+*.feather
+
+# Docker
+*.tar
+
+# Node (if any frontend experiments later)
+node_modules/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Cache tools
+.cache/
+
+# Temporary
+*.tmp
+*.bak
+*~
+geo_locations_astana_hackathon.csv
+prd
+docs.md
+prd.md
+heatmap_bff/docs/01_HACKATHON_CONTEXT.md
+heatmap_bff/docs/02_DATASET.md
+heatmap_bff/docs/03_PRIVACY.md
+heatmap_bff/docs/04_API.md
+heatmap_bff/docs/05_UI_INTEGRATION.md
+heatmap_bff/docs/06_ROADMAP.md
+
+.serena/
