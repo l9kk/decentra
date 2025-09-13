@@ -19,7 +19,9 @@ class ForecastCell:
     current_count: int
     unique_trips: int
     suppressed: bool
-    predictions: Dict[int, Dict[str, float]]  # horizon -> {predicted, lower, upper, demand_index}
+    predictions: Dict[
+        int, Dict[str, float]
+    ]  # horizon -> {predicted, lower, upper, demand_index}
 
 
 _forecast_cache: Dict[str, Dict[str, object]] = {}
@@ -27,6 +29,7 @@ _forecast_cache: Dict[str, Dict[str, object]] = {}
 # Lazy loaded enrichment sets per resolution
 _hub_cells_cache: Dict[int, Set[str]] = {}
 _corridor_cells_cache: Dict[int, Set[str]] = {}
+
 
 def _load_hubs(res: int) -> Set[str]:
     if res in _hub_cells_cache:
@@ -39,7 +42,9 @@ def _load_hubs(res: int) -> Set[str]:
         df = df.sort_values("count", ascending=False).head(50)
         for _, r in df.iterrows():
             try:
-                hubs.add(h3.latlng_to_cell(float(r["lat_mean"]), float(r["lng_mean"]), res))
+                hubs.add(
+                    h3.latlng_to_cell(float(r["lat_mean"]), float(r["lng_mean"]), res)
+                )
             except Exception:  # pragma: no cover - robustness
                 continue
     except Exception:
@@ -55,7 +60,11 @@ def _load_corridor_cells(res: int) -> Set[str]:
     cells: Set[str] = set()
     try:
         # Only parse limited rows to avoid huge geometry column cost
-        df = pd.read_csv(f"{settings.artifacts_dir}/od_top.csv", usecols=["start_cluster", "end_cluster", "trip_count"], nrows=200)
+        df = pd.read_csv(
+            f"{settings.artifacts_dir}/od_top.csv",
+            usecols=["start_cluster", "end_cluster", "trip_count"],
+            nrows=200,
+        )
         # treat clusters with high trip_count as corridor anchors
         df = df.sort_values("trip_count", ascending=False).head(100)
         # We do not have cluster centroid file here; fallback: reuse stop_clusters centroids subset mapping by id if available
@@ -63,7 +72,10 @@ def _load_corridor_cells(res: int) -> Set[str]:
         if pd.io.common.is_file_like(sc_path) or True:
             try:
                 sc = pd.read_csv(sc_path)
-                cluster_map = {int(r["cluster_id"]): (float(r["lat_mean"]), float(r["lng_mean"])) for _, r in sc.iterrows()}
+                cluster_map = {
+                    int(r["cluster_id"]): (float(r["lat_mean"]), float(r["lng_mean"]))
+                    for _, r in sc.iterrows()
+                }
                 for _, r in df.iterrows():
                     for cid_col in ("start_cluster", "end_cluster"):
                         cid = int(r[cid_col])
@@ -118,7 +130,13 @@ def generate_forecast(res: int, horizons: Sequence[int]) -> dict:
     agg = aggregates_repo.get_resolution(res)
     df = agg.df.copy()
     if df.empty:
-        return {"generated_at": datetime.utcnow().isoformat()+"Z", "res": res, "horizons_minutes": horizons, "forecast_version": "heuristic_v2", "cells": []}
+        return {
+            "generated_at": datetime.utcnow().isoformat() + "Z",
+            "res": res,
+            "horizons_minutes": horizons,
+            "forecast_version": "heuristic_v2",
+            "cells": [],
+        }
 
     k = settings.suppress_k
     suppressed_mask = (df["point_count"] < k) | (df["unique_trips"] < k)
@@ -137,7 +155,9 @@ def generate_forecast(res: int, horizons: Sequence[int]) -> dict:
     cell_set = set(df["h3"].tolist())
     neighbor_map: Dict[str, List[str]] = {}
     for h3cell in cell_set:
-        neighbor_map[h3cell] = [n for n in h3.k_ring(h3cell, 1) if n in cell_set and n != h3cell]
+        neighbor_map[h3cell] = [
+            n for n in h3.k_ring(h3cell, 1) if n in cell_set and n != h3cell
+        ]
 
     alpha = 0.7  # smoothing weight
     corridor_boost = 0.10
@@ -165,18 +185,26 @@ def generate_forecast(res: int, horizons: Sequence[int]) -> dict:
         cell_id = r["h3"]
         pc = int(r["point_count"])
         neighs = neighbor_map.get(cell_id, [])
-        neigh_mean = statistics.mean([int(df.loc[df["h3"] == n, "point_count"].iloc[0]) for n in neighs]) if neighs else pc
+        neigh_mean = (
+            statistics.mean(
+                [int(df.loc[df["h3"] == n, "point_count"].iloc[0]) for n in neighs]
+            )
+            if neighs
+            else pc
+        )
         smoothed = alpha * pc + (1 - alpha) * neigh_mean
-        enriched.append({
-            "h3": cell_id,
-            "point_count": pc,
-            "smoothed": smoothed,
-            "unique_trips": int(r["unique_trips"]),
-            "decay": decay_for(pc, cell_id),
-            "is_corridor": cell_id in corridors,
-            "is_hub": cell_id in hubs,
-            "suppressed": bool((pc < k) or (int(r["unique_trips"]) < k)),
-        })
+        enriched.append(
+            {
+                "h3": cell_id,
+                "point_count": pc,
+                "smoothed": smoothed,
+                "unique_trips": int(r["unique_trips"]),
+                "decay": decay_for(pc, cell_id),
+                "is_corridor": cell_id in corridors,
+                "is_hub": cell_id in hubs,
+                "suppressed": bool((pc < k) or (int(r["unique_trips"]) < k)),
+            }
+        )
 
     max_pred_by_h: Dict[int, float] = {h: 0.0 for h in horizons}
     preds_per_cell: Dict[str, Dict[int, Dict[str, float]]] = {}
@@ -190,8 +218,8 @@ def generate_forecast(res: int, horizons: Sequence[int]) -> dict:
             predicted = float(base_val) * math.exp(-lam * hours)
             # Corridor short-horizon persistence boost
             if row["is_corridor"] and hours <= 0.5:
-                boost = (corridor_boost * math.exp(-hours / corridor_tau_hours))
-                predicted *= (1 + boost)
+                boost = corridor_boost * math.exp(-hours / corridor_tau_hours)
+                predicted *= 1 + boost
             lower, upper = _poisson_ci(predicted)
             # Tier-based CI scaling
             pc = row["point_count"]  # type: ignore[index]
@@ -234,16 +262,18 @@ def generate_forecast(res: int, horizons: Sequence[int]) -> dict:
                 "upper": round(d["upper"], 3),
                 "demand_index": round(d["predicted"] / denom, 4),
             }
-        cells_payload.append({
-            "h3": row["h3"],
-            "current_count": row["point_count"],
-            "unique_trips": row["unique_trips"],
-            "suppressed": row["suppressed"],
-            "is_hub": row["is_hub"],
-            "is_corridor": row["is_corridor"],
-            "decay": round(row["decay"], 5),
-            "predictions": out_preds,
-        })
+        cells_payload.append(
+            {
+                "h3": row["h3"],
+                "current_count": row["point_count"],
+                "unique_trips": row["unique_trips"],
+                "suppressed": row["suppressed"],
+                "is_hub": row["is_hub"],
+                "is_corridor": row["is_corridor"],
+                "decay": round(row["decay"], 5),
+                "predictions": out_preds,
+            }
+        )
 
     payload = {
         "generated_at": datetime.utcnow().isoformat() + "Z",
@@ -285,5 +315,11 @@ def forecast_geojson(payload: dict, polygon: bool = True) -> dict:
             geometry = {"type": "Point", "coordinates": [lon, lat]}
         properties = {k: v for k, v in cell.items() if k != "h3"}
         properties["h3"] = cell["h3"]
-        features.append({"type": "Feature", "geometry": geometry, "properties": properties})
-    return {"type": "FeatureCollection", "features": features, "meta": {k: v for k, v in payload.items() if k != "cells"}}
+        features.append(
+            {"type": "Feature", "geometry": geometry, "properties": properties}
+        )
+    return {
+        "type": "FeatureCollection",
+        "features": features,
+        "meta": {k: v for k, v in payload.items() if k != "cells"},
+    }

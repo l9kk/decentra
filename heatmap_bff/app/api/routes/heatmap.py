@@ -97,7 +97,10 @@ async def cells(
     k: int | None = Query(None, ge=1),
     bbox: str | None = Query(None, description="minLat,minLng,maxLat,maxLng"),
     format: str = Query("json", pattern="^(json|geojson)$"),
-    polygon: bool = Query(True, description="When geojson, if true return Polygon cells else Point centers"),
+    polygon: bool = Query(
+        True,
+        description="When geojson, if true return Polygon cells else Point centers",
+    ),
     limit: int | None = Query(None, ge=1, le=50000),
 ):
     settings = get_settings()
@@ -174,7 +177,9 @@ async def cells(
             props = c.model_dump(exclude={"center"})
             # demand_index for live layer
             if c.value is not None:
-                props["demand_index"] = round((c.value / max_val) if max_val else 0.0, 4)
+                props["demand_index"] = round(
+                    (c.value / max_val) if max_val else 0.0, 4
+                )
             if polygon:
                 boundary = h3.cell_to_boundary(c.h3, geo_json=True)
                 geometry = {"type": "Polygon", "coordinates": [boundary]}
@@ -183,6 +188,8 @@ async def cells(
                     "type": "Point",
                     "coordinates": [c.center.lng, c.center.lat],
                 }
-            features.append({"type": "Feature", "geometry": geometry, "properties": props})
+            features.append(
+                {"type": "Feature", "geometry": geometry, "properties": props}
+            )
         return {"type": "FeatureCollection", "features": features}
     return [c.model_dump() for c in cells_out]

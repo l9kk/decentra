@@ -46,10 +46,14 @@ async def forecast_cells(
     res: int = Query(...),
     horizons: str = Query("5,10,15"),
     format: str = Query("json", pattern="^(json|geojson)$"),
-    polygon: bool = Query(True, description="GeoJSON polygons vs points when format=geojson"),
+    polygon: bool = Query(
+        True, description="GeoJSON polygons vs points when format=geojson"
+    ),
     limit: int | None = Query(None, ge=1, le=50000),
     include_suppressed: bool = Query(False),
-    include_enrichment: bool = Query(True, description="Include is_hub,is_corridor,decay fields"),
+    include_enrichment: bool = Query(
+        True, description="Include is_hub,is_corridor,decay fields"
+    ),
 ):
     try:
         horizon_list = [int(h.strip()) for h in horizons.split(",") if h.strip()]
@@ -74,7 +78,11 @@ async def forecast_cells(
     if not include_enrichment:
         trimmed = []
         for c in cells:
-            c2 = {k: v for k, v in c.items() if k not in ("is_hub", "is_corridor", "decay")}
+            c2 = {
+                k: v
+                for k, v in c.items()
+                if k not in ("is_hub", "is_corridor", "decay")
+            }
             trimmed.append(c2)
         cells_to_emit = trimmed
     else:
