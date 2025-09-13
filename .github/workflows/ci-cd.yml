@@ -20,17 +20,19 @@ jobs:
 
       - name: Deploy (docker compose)
         run: |
-          ssh -o StrictHostKeyChecking=no -i id_rsa ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} 'bash -lc '\''
-            set -e
-            REPO=heatmap-bff
-            if [ ! -d "$REPO" ]; then git clone ${{ github.server_url }}/${{ github.repository }} "$REPO"; fi
-            cd "$REPO"
-            git fetch --all
-            git reset --hard origin/main
-            cd heatmap_bff
-            docker compose down || true
-            docker compose up -d --build
-          '\''
+          ssh -o StrictHostKeyChecking=no -i id_rsa ${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }} <<'EOF'
+          set -e
+          REPO=heatmap-bff
+          if [ ! -d "$REPO" ]; then
+            git clone ${{ github.server_url }}/${{ github.repository }} "$REPO"
+          fi
+          cd "$REPO"
+          git fetch --all
+          git reset --hard origin/main
+          cd heatmap_bff
+          docker compose down || true
+          docker compose up -d --build
+          EOF
 
       - name: Health check
         run: |
