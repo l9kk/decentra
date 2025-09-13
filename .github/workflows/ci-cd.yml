@@ -30,8 +30,26 @@ jobs:
           git fetch --all
           git reset --hard origin/main
           cd heatmap_bff
+          # Install Docker if missing (hackathon quick path)
+          if ! command -v docker >/dev/null 2>&1; then
+            echo "Docker not found: installing via get.docker.com script"
+            apt-get update -y && apt-get install -y curl
+            curl -fsSL https://get.docker.com | sh
+            systemctl enable docker || true
+            systemctl start docker || true
+            echo "Docker installed: $(docker --version)"
+          fi
+          # Basic sanity: ensure docker compose v2 available
+          if ! docker compose version >/dev/null 2>&1; then
+            echo "docker compose plugin missing; attempting manual install";
+            curl -SL https://github.com/docker/compose/releases/download/v2.29.2/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose;
+            chmod +x /usr/local/bin/docker-compose;
+            ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose || true;
+          fi
+          echo "Docker Compose version:"; (docker compose version || docker-compose version || true)
           docker compose down || true
           docker compose up -d --build
+          echo "Containers:"; docker ps --format 'table {{.Names}}\t{{.Status}}'
           EOF
 
       - name: Health check
