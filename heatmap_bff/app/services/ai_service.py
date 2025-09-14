@@ -93,7 +93,8 @@ class AIService:
             logger.error(f"No aggregates for resolution {res}")
             return pd.DataFrame()
 
-        df = resolution_data.data.copy()
+        # Get data through the repository interface
+        df = aggregates_repo.get_dataframe(res).copy()
 
         # Calculate activity level (normalized)
         max_points = df["point_count"].max() if len(df) > 0 else 1
