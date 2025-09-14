@@ -86,7 +86,7 @@ class AIService:
         proximity_bonus = max(0, 0.3 * math.exp(-min_distance * 100))
         return proximity_bonus
 
-    def _prepare_training_data(self, res: int = 8) -> pd.DataFrame:
+    def _prepare_training_data(self, res: int = 9) -> pd.DataFrame:
         try:
             resolution_data = aggregates_repo.get_resolution(res)
         except KeyError:
@@ -289,15 +289,16 @@ class AIService:
         scores.sort(key=lambda x: x.total_score, reverse=True)
         return scores
 
-    def _get_area_activity(self, lat: float, lng: float, res: int = 8) -> float:
+    def _get_area_activity(self, lat: float, lng: float, res: int = 9) -> float:
         """Get activity level for a location (simplified implementation)."""
         try:
             # Get H3 cell for location
             h3_cell = h3.latlng_to_cell(lat, lng, res)
 
             # Look up in aggregates
-            if res in aggregates_repo.aggregates:
-                df = aggregates_repo.aggregates[res]
+            try:
+                resolution_data = aggregates_repo.get_resolution(res)
+                df = resolution_data.df
                 cell_data = df[df["h3"] == h3_cell]
                 if len(cell_data) > 0:
                     # Normalize activity
@@ -307,6 +308,10 @@ class AIService:
                         if max_points > 0
                         else 0.0
                     )
+
+            except KeyError:
+                # Resolution not available
+                pass
 
             return 0.1  # Default low activity
 
