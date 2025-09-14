@@ -156,7 +156,7 @@ def generate_forecast(res: int, horizons: Sequence[int]) -> dict:
     neighbor_map: Dict[str, List[str]] = {}
     for h3cell in cell_set:
         neighbor_map[h3cell] = [
-            n for n in h3.k_ring(h3cell, 1) if n in cell_set and n != h3cell
+            n for n in h3.grid_ring(h3cell, 1) if n in cell_set and n != h3cell
         ]
 
     alpha = 0.7  # smoothing weight
