@@ -94,7 +94,7 @@ class AIService:
             return pd.DataFrame()
 
         # Get data through the repository interface
-        df = aggregates_repo.get_dataframe(res).copy()
+        df = aggregates_repo.get_resolution(res).df.copy()
 
         # Calculate activity level (normalized)
         max_points = df["point_count"].max() if len(df) > 0 else 1
