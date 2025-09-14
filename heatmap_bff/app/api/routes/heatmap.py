@@ -49,9 +49,6 @@ async def top(
     res: int | None = Query(None),
     metric: str = Query("points", pattern="^(points|trips)$"),
     limit: int = Query(50, ge=1, le=1000),
-    include_score: bool = Query(
-        False, description="Include score and score_quantile if available"
-    ),
 ):
     settings = get_settings()
     res_final = (
@@ -61,15 +58,15 @@ async def top(
     )
     agg = aggregates_repo.get_resolution(res_final)
     df = agg.df.copy()
-    
-    # Choose sorting column: prefer score if available and requested, otherwise use metric
-    if include_score and "score" in df.columns:
+
+    # Choose sorting column: prefer score if available, otherwise use metric
+    if "score" in df.columns:
         sort_col = "score"
         ascending = False
     else:
         sort_col = "point_count" if metric == "points" else "unique_trips"
         ascending = False
-        
+
     df = df.sort_values(sort_col, ascending=ascending).head(limit)
     total_points = agg.total_points or 1
     total_trips = agg.total_trips or 1
@@ -90,13 +87,12 @@ async def top(
                 schema_version="1.0.0",
                 score=(
                     float(r["score"])
-                    if include_score and "score" in r and not pd.isna(r["score"])
+                    if "score" in r and not pd.isna(r["score"])
                     else None
                 ),
                 score_quantile=(
                     float(r["score_quantile"])
-                    if include_score
-                    and "score_quantile" in r
+                    if "score_quantile" in r
                     and not pd.isna(r["score_quantile"])
                     else None
                 ),
@@ -115,9 +111,6 @@ async def cells(
     res: int = Depends(validate_resolution),
     metric: str = Query("points", pattern="^(points|trips)$"),
     include_suppressed: bool = Query(False),
-    include_score: bool = Query(
-        False, description="Include score and score_quantile if available"
-    ),
     k: int | None = Query(None, ge=1),
     bbox: str | None = Query(None, description="minLat,minLng,maxLat,maxLng"),
     format: str = Query("json", pattern="^(json|geojson)$"),
@@ -179,13 +172,12 @@ async def cells(
                 schema_version="1.0.0",
                 score=(
                     float(r["score"])
-                    if include_score and "score" in r and not pd.isna(r["score"])
+                    if "score" in r and not pd.isna(r["score"])
                     else None
                 ),
                 score_quantile=(
                     float(r["score_quantile"])
-                    if include_score
-                    and "score_quantile" in r
+                    if "score_quantile" in r
                     and not pd.isna(r["score_quantile"])
                     else None
                 ),
